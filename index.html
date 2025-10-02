@@ -42,7 +42,14 @@
     .appbar .btn-tab { @apply flex-1 py-2 text-xs text-gray-600; }
     .hero { @apply bg-gradient-to-r from-blue-50 to-green-50 rounded-3xl p-4; }
     .grid-cards { @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-3; }
-  </style>
+  
+    .skeleton{ @apply animate-pulse bg-gray-200 rounded; }
+    .skeleton-text{ @apply h-3 w-24 skeleton; }
+    .skeleton-box{ @apply h-24 skeleton; }
+    .mobile-controls { @apply fixed bottom-16 left-0 right-0 z-30; }
+    .mobile-controls .wrap { @apply max-w-5xl mx-auto px-4; }
+    .mobile-controls .bar { @apply bg-white rounded-2xl shadow-card p-3 flex items-center justify-between; }
+        </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800 pb-16">
   <!-- Top Bar -->
@@ -117,7 +124,19 @@
         <button id="btnPrintExam" class="btn-ghost">พิมพ์ใบงาน</button>
       </div>
     </section>
-  </main>
+  
+  <!-- Mobile next/prev controls (appear on small screens) -->
+  <div id="mobileControls" class="mobile-controls hidden sm:hidden">
+    <div class="wrap">
+      <div class="bar">
+        <button id="btnPrevQ" class="px-4 py-2 rounded-xl border">ก่อนหน้า</button>
+        <div class="text-sm"><span id="qProgress">ข้อ 1/—</span></div>
+        <button id="btnNextQ" class="px-4 py-2 rounded-xl bg-blue-600 text-white">ถัดไป</button>
+      </div>
+    </div>
+  </div>
+</main>
+
 
   <!-- Bottom App Bar -->
   <nav class="appbar">
