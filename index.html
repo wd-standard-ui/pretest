@@ -2,111 +2,103 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Exam System — App</title>
-  <!-- Tailwind CDN -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>Exam App</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: { sans: ['Kanit','system-ui','sans-serif'] },
-          colors: {
-            subjectMath: '#3B82F6',
-            subjectEng: '#EF4444',
-            subjectThai: '#10B981'
-          },
-          boxShadow: { card: '0 10px 24px rgba(0,0,0,.08)' }
+          colors: { brand: '#22c55e', brand2:'#16a34a', math:'#3B82F6', eng:'#EF4444', thai:'#10B981' },
+          boxShadow: { soft: '0 10px 30px rgba(0,0,0,.08)' }
         }
       }
-    }
+    };
   </script>
-  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/print.css">
-  <!-- SweetAlert2 & Chart.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.7/sweetalert2.all.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-  <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.7/sweetalert2.all.min.js"></script>
   <style>
-    body { font-family: Kanit, system-ui, sans-serif; }
-    .btn { @apply px-4 py-2 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50; }
+    :root { color-scheme: light; }
+    html, body { height: 100%; }
+    body { font-family: Kanit, system-ui, sans-serif; background: #f7faf9; }
+    .card { @apply bg-white rounded-3xl shadow-soft p-4; }
+    .btn { @apply px-4 py-2 rounded-2xl text-white bg-brand hover:bg-brand2 active:scale-95 transition; }
     .btn-ghost { @apply px-4 py-2 rounded-2xl border; }
-    .card { @apply bg-white rounded-2xl shadow-card p-4; }
-    .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
-    .tabs { @apply flex gap-2 overflow-auto; }
-    .tab { @apply px-3 py-2 rounded-full bg-gray-100 text-sm whitespace-nowrap; }
-    .tab.active { @apply bg-blue-600 text-white; }
-    .appbar { @apply fixed bottom-0 left-0 right-0 bg-white border-t z-30; }
-    .appbar .btn-tab { @apply flex-1 py-2 text-xs text-gray-600; }
-    .hero { @apply bg-gradient-to-r from-blue-50 to-green-50 rounded-3xl p-4; }
-    .grid-cards { @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-3; }
-  
-    .skeleton{ @apply animate-pulse bg-gray-200 rounded; }
-    .skeleton-text{ @apply h-3 w-24 skeleton; }
-    .skeleton-box{ @apply h-24 skeleton; }
-    .mobile-controls { @apply fixed bottom-16 left-0 right-0 z-30; }
-    .mobile-controls .wrap { @apply max-w-5xl mx-auto px-4; }
-    .mobile-controls .bar { @apply bg-white rounded-2xl shadow-card p-3 flex items-center justify-between; }
-        </style>
+    .tabbar { @apply fixed bottom-0 left-0 right-0 bg-white border-t z-40; }
+    .tab-btn { @apply flex-1 py-2 text-xs text-gray-600; }
+    .hero { @apply rounded-3xl bg-gradient-to-br from-emerald-50 to-emerald-100 p-4; }
+    .badge { @apply inline-flex items-center text-xs px-2 py-0.5 rounded-full; }
+    .skeleton { @apply animate-pulse bg-gray-200 rounded; }
+    .skeleton-box { @apply h-24 skeleton; }
+    .safe { padding-bottom: env(safe-area-inset-bottom); }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800 pb-16">
-  <!-- Top Bar -->
-  <header class="sticky top-0 bg-white/80 backdrop-blur border-b z-30">
+<body class="safe pb-16">
+  <!-- App Header -->
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="font-bold">📘 Exam System</div>
+      <div class="font-bold">📘 Exam App</div>
       <div id="userBadge" class="hidden items-center gap-2">
-        <img id="userAvatar" class="w-8 h-8 rounded-full" alt="avatar"/>
-        <span id="userName" class="text-sm"></span>
-        <button id="btnLogout" class="text-xs text-red-600 underline">Logout</button>
+        <img id="userAvatar" class="w-9 h-9 rounded-full bg-gray-100" alt="avatar"/>
+        <div class="text-right leading-tight">
+          <div id="userName" class="text-sm font-semibold">—</div>
+          <div id="userRole" class="text-[11px] text-gray-500">—</div>
+        </div>
+        <button id="btnLogout" class="text-[11px] text-red-600 underline">ออก</button>
       </div>
     </div>
   </header>
 
   <main class="max-w-5xl mx-auto px-4 py-4 space-y-4">
-    <!-- Login Section -->
-    <section id="view-login" class="card">
-      <h1 class="text-xl font-bold mb-2">เข้าสู่ระบบ</h1>
-      <p class="text-gray-600 mb-4">เข้าสู่ระบบด้วย LINE หรือทดลองใช้งานแบบ Guest ได้ทันที</p>
-      <div class="flex gap-2">
+    <!-- Welcome/Login (appwd-like full panel) -->
+    <section id="view-welcome" class="card">
+      <div class="flex items-center gap-4">
+        <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4da.svg" class="w-14 h-14" alt="logo">
+        <div>
+          <div class="text-xs text-gray-500">ยินดีต้อนรับ</div>
+          <div class="text-lg font-bold">เข้าสู่ระบบเพื่อเริ่มใช้งาน</div>
+        </div>
+      </div>
+      <div class="mt-3 text-sm text-gray-600">เข้าสู่ระบบด้วย LINE เพื่อเริ่มทำข้อสอบ หรือดูตัวอย่างการใช้งานได้ทันที</div>
+      <div class="mt-3 flex gap-2">
         <button id="btnLineLogin" class="btn">Login with LINE</button>
-        <button id="btnGuest" class="btn-ghost">โหมดทดสอบ (ไม่ล็อกอิน)</button>
+        <button id="btnGuest" class="btn-ghost">ดูตัวอย่างทันที</button>
       </div>
     </section>
 
-    <!-- Home (Mobile-app style) -->
+    <!-- Home -->
     <section id="view-home" class="hidden space-y-4">
       <div class="hero flex items-center gap-4">
         <img id="heroAvatar" class="w-14 h-14 rounded-2xl bg-white object-cover" alt="avatar">
         <div>
-          <div class="text-sm text-gray-500">ยินดีต้อนรับ</div>
+          <div class="text-xs text-gray-500">พร้อมเรียนรู้วันนี้</div>
           <div id="heroName" class="text-lg font-semibold">—</div>
-          <div id="heroRole" class="text-xs text-gray-500">—</div>
+          <div id="heroRole" class="text-[12px] text-gray-500">—</div>
         </div>
       </div>
 
       <div>
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-lg font-semibold">ข้อสอบตามหมวด</h2>
-          <div class="tabs" id="subjectTabs"></div>
+          <h2 class="text-lg font-semibold">ข้อสอบ</h2>
+          <div id="subjectTabs" class="flex gap-2 overflow-auto"></div>
         </div>
-        <div id="examGrid" class="grid-cards"></div>
+        <div id="examGrid" class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"></div>
       </div>
-    </section>
 
-    <!-- Teacher Dashboard (button to Admin GAS UI) -->
-    <section id="view-teacher-shortcut" class="hidden">
-      <div class="card flex items-center justify-between">
+      <div id="teacherShortcut" class="hidden card flex items-center justify-between">
         <div>
-          <div class="font-semibold">แดชบอร์ดครู (Admin แบบเต็ม)</div>
-          <div class="text-xs text-gray-500">ไปยังหน้า Admin บน GAS เพื่อสร้างข้อสอบ/คำถาม/พิมพ์ใบงาน</div>
+          <div class="font-semibold">แดชบอร์ดครู</div>
+          <div class="text-xs text-gray-500">จัดการข้อสอบ/คำถาม/พิมพ์ใบงาน</div>
         </div>
-        <a id="linkAdmin" target="_blank" class="btn-ghost">เปิด GAS Admin</a>
+        <a id="linkAdmin" target="_blank" class="btn-ghost">เปิด Admin</a>
       </div>
     </section>
 
-    <!-- Exam Taking View -->
+    <!-- Exam -->
     <section id="view-exam" class="hidden space-y-4">
       <div class="card flex items-center justify-between">
         <div>
@@ -114,7 +106,7 @@
           <p id="examMeta" class="text-sm text-gray-500"></p>
         </div>
         <div class="text-right">
-          <div class="text-xs text-gray-500">เวลา</div>
+          <div class="text-[11px] text-gray-500">เวลา</div>
           <div id="examTimer" class="text-xl font-bold">—:—</div>
         </div>
       </div>
@@ -124,45 +116,33 @@
         <button id="btnPrintExam" class="btn-ghost">พิมพ์ใบงาน</button>
       </div>
     </section>
-  
-  <!-- Mobile next/prev controls (appear on small screens) -->
-  <div id="mobileControls" class="mobile-controls hidden sm:hidden">
-    <div class="wrap">
-      <div class="bar">
+  </main>
+
+  <!-- Mobile pager -->
+  <div id="mobileControls" class="fixed bottom-14 left-0 right-0 z-40 hidden sm:hidden">
+    <div class="max-w-5xl mx-auto px-4">
+      <div class="bg-white rounded-2xl shadow-soft p-3 flex items-center justify-between">
         <button id="btnPrevQ" class="px-4 py-2 rounded-xl border">ก่อนหน้า</button>
         <div class="text-sm"><span id="qProgress">ข้อ 1/—</span></div>
-        <button id="btnNextQ" class="px-4 py-2 rounded-xl bg-blue-600 text-white">ถัดไป</button>
+        <button id="btnNextQ" class="px-4 py-2 rounded-xl bg-brand text-white">ถัดไป</button>
       </div>
     </div>
   </div>
-</main>
 
-
-  <!-- Bottom App Bar -->
-  <nav class="appbar">
+  <!-- Tabbar -->
+  <nav class="tabbar">
     <div class="max-w-5xl mx-auto grid grid-cols-3 text-center">
-      <button class="btn-tab" id="tabHome">หน้าแรก</button>
-      <button class="btn-tab" id="tabExams">ข้อสอบ</button>
-      <button class="btn-tab" id="tabProfile">โปรไฟล์</button>
+      <button class="tab-btn" id="tabHome">หน้าแรก</button>
+      <button class="tab-btn" id="tabExams">ข้อสอบ</button>
+      <button class="tab-btn" id="tabProfile">โปรไฟล์</button>
     </div>
   </nav>
 
-  <!-- Print-only -->
-  <section id="view-print" class="hidden print:block print:p-6">
-    <h1 class="text-xl font-bold mb-2">ใบงาน</h1>
-    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
-      <div>ชื่อ-นามสกุล: _______________________</div>
-      <div>เลขที่: _______</div>
-      <div>วันที่: ____/____/______</div>
-    </div>
-    <div id="printContent" class="space-y-4"></div>
-    <div class="page-break"></div>
-    <h2 class="text-lg font-semibold">เฉลย</h2>
-    <div id="printAnswer" class="space-y-2"></div>
-  </section>
-
-  <!-- Config + App -->
   <script type="module" src="./js/config.js"></script>
+  <script type="module" src="./js/api.js"></script>
+  <script type="module" src="./js/auth.js"></script>
+  <script type="module" src="./js/ui.js"></script>
+  <script type="module" src="./js/exam.js"></script>
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
