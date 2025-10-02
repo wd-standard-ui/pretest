@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Exam System — Starter</title>
+  <title>Exam System — App</title>
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -30,12 +30,22 @@
   <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    .btn { @apply px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50; }
+    body { font-family: Kanit, system-ui, sans-serif; }
+    .btn { @apply px-4 py-2 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50; }
+    .btn-ghost { @apply px-4 py-2 rounded-2xl border; }
     .card { @apply bg-white rounded-2xl shadow-card p-4; }
     .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
+    .tabs { @apply flex gap-2 overflow-auto; }
+    .tab { @apply px-3 py-2 rounded-full bg-gray-100 text-sm whitespace-nowrap; }
+    .tab.active { @apply bg-blue-600 text-white; }
+    .appbar { @apply fixed bottom-0 left-0 right-0 bg-white border-t z-30; }
+    .appbar .btn-tab { @apply flex-1 py-2 text-xs text-gray-600; }
+    .hero { @apply bg-gradient-to-r from-blue-50 to-green-50 rounded-3xl p-4; }
+    .grid-cards { @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-3; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800">
+<body class="bg-gray-50 min-h-screen text-gray-800 pb-16">
+  <!-- Top Bar -->
   <header class="sticky top-0 bg-white/80 backdrop-blur border-b z-30">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="font-bold">📘 Exam System</div>
@@ -47,65 +57,45 @@
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 py-6">
+  <main class="max-w-5xl mx-auto px-4 py-4 space-y-4">
     <!-- Login Section -->
     <section id="view-login" class="card">
       <h1 class="text-xl font-bold mb-2">เข้าสู่ระบบ</h1>
-      <p class="text-gray-600 mb-4">ระบบนี้ใช้ LINE Login (LIFF) เท่านั้น</p>
-      <button id="btnLineLogin" class="btn">Login with LINE</button>
+      <p class="text-gray-600 mb-4">เข้าสู่ระบบด้วย LINE หรือทดลองใช้งานแบบ Guest ได้ทันที</p>
+      <div class="flex gap-2">
+        <button id="btnLineLogin" class="btn">Login with LINE</button>
+        <button id="btnGuest" class="btn-ghost">โหมดทดสอบ (ไม่ล็อกอิน)</button>
+      </div>
     </section>
 
-    <!-- Teacher Dashboard -->
-    <section id="view-teacher" class="hidden space-y-4">
+    <!-- Home (Mobile-app style) -->
+    <section id="view-home" class="hidden space-y-4">
+      <div class="hero flex items-center gap-4">
+        <img id="heroAvatar" class="w-14 h-14 rounded-2xl bg-white object-cover" alt="avatar">
+        <div>
+          <div class="text-sm text-gray-500">ยินดีต้อนรับ</div>
+          <div id="heroName" class="text-lg font-semibold">—</div>
+          <div id="heroRole" class="text-xs text-gray-500">—</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-lg font-semibold">ข้อสอบตามหมวด</h2>
+          <div class="tabs" id="subjectTabs"></div>
+        </div>
+        <div id="examGrid" class="grid-cards"></div>
+      </div>
+    </section>
+
+    <!-- Teacher Dashboard (button to Admin GAS UI) -->
+    <section id="view-teacher-shortcut" class="hidden">
       <div class="card flex items-center justify-between">
-        <div class="space-y-1">
-          <h2 class="text-lg font-semibold">แดชบอร์ดครู</h2>
-          <p class="text-sm text-gray-500">เลือกชั้นเรียน → จัดการข้อสอบ/คำถาม (อัปโหลดรูปได้)</p>
+        <div>
+          <div class="font-semibold">แดชบอร์ดครู (Admin แบบเต็ม)</div>
+          <div class="text-xs text-gray-500">ไปยังหน้า Admin บน GAS เพื่อสร้างข้อสอบ/คำถาม/พิมพ์ใบงาน</div>
         </div>
-        <div class="flex gap-2 items-center">
-          <select id="selectClass" class="border rounded-lg px-3 py-2"></select>
-          <button id="btnNewExam" class="btn">สร้างข้อสอบ</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 class="font-semibold mb-3">รายการข้อสอบในชั้นนี้</h3>
-        <div id="examList" class="grid sm:grid-cols-2 gap-3"></div>
-      </div>
-
-      <div class="card">
-        <h3 class="font-semibold mb-3">เพิ่ม/แก้ไขคำถาม (ตัวอย่าง Minimal)</h3>
-        <form id="formQuestion" class="grid md:grid-cols-2 gap-3">
-          <input type="text" id="qExamId" placeholder="Exam ID" class="border rounded-lg px-3 py-2" required>
-          <input type="number" id="qOrder" placeholder="ลำดับ" class="border rounded-lg px-3 py-2" value="1" min="1">
-          <select id="qType" class="border rounded-lg px-3 py-2">
-            <option value="mcq">Multiple Choice</option>
-            <option value="matching">Matching</option>
-            <option value="fill">Fill in the Blank</option>
-            <option value="tf">True/False</option>
-          </select>
-          <input type="number" id="qPoints" placeholder="คะแนน" class="border rounded-lg px-3 py-2" value="1" min="0">
-          <textarea id="qText" placeholder="ข้อความคำถาม" class="border rounded-lg px-3 py-2 md:col-span-2" required></textarea>
-
-          <label class="md:col-span-2">
-            <span class="block text-sm text-gray-600 mb-1">แนบรูปภาพ (ได้หลายไฟล์)</span>
-            <input type="file" id="qFiles" multiple accept="image/*" class="block w-full">
-          </label>
-
-          <button class="btn md:col-span-2">บันทึกคำถาม</button>
-        </form>
-      </div>
-    </section>
-
-    <!-- Student Dashboard -->
-    <section id="view-student" class="hidden space-y-4">
-      <div class="card">
-        <h2 class="text-lg font-semibold mb-2">ข้อสอบที่เปิดให้ทำ</h2>
-        <div id="openExams" class="grid sm:grid-cols-2 gap-3"></div>
-      </div>
-      <div class="card">
-        <h3 class="font-semibold mb-2">ประวัติการทำข้อสอบ</h3>
-        <div id="attemptHistory" class="text-sm text-gray-500">—</div>
+        <a id="linkAdmin" target="_blank" class="btn-ghost">เปิด GAS Admin</a>
       </div>
     </section>
 
@@ -122,11 +112,21 @@
         </div>
       </div>
       <div id="examQuestions" class="space-y-3"></div>
-      <div class="card flex justify-end">
+      <div class="card flex justify-end gap-2">
         <button id="btnSubmitExam" class="btn">ส่งคำตอบ</button>
+        <button id="btnPrintExam" class="btn-ghost">พิมพ์ใบงาน</button>
       </div>
     </section>
   </main>
+
+  <!-- Bottom App Bar -->
+  <nav class="appbar">
+    <div class="max-w-5xl mx-auto grid grid-cols-3 text-center">
+      <button class="btn-tab" id="tabHome">หน้าแรก</button>
+      <button class="btn-tab" id="tabExams">ข้อสอบ</button>
+      <button class="btn-tab" id="tabProfile">โปรไฟล์</button>
+    </div>
+  </nav>
 
   <!-- Print-only -->
   <section id="view-print" class="hidden print:block print:p-6">
