@@ -1,10 +1,14 @@
-// auth.js — LINE LIFF login (inside/outside) + Guest mode (no preflight)
+// auth.js — LIFF login + appwd-like UX (guest preview allowed)
 import { LIFF_ID } from './config.js';
 import { apiPost } from './api.js';
 
 const userBadge = document.getElementById('userBadge');
 const avatar = document.getElementById('userAvatar');
-const nameEl = document.getElementById('userName');
+const userName = document.getElementById('userName');
+const userRole = document.getElementById('userRole');
+const heroAvatar = document.getElementById('heroAvatar');
+const heroName = document.getElementById('heroName');
+const heroRole = document.getElementById('heroRole');
 const btnLogout = document.getElementById('btnLogout');
 const btnLogin = document.getElementById('btnLineLogin');
 const btnGuest = document.getElementById('btnGuest');
@@ -12,69 +16,83 @@ const btnGuest = document.getElementById('btnGuest');
 export const Auth = {
   profile: null,
   token: null,
-  mode: 'line', // 'line' | 'guest'
+  mode: 'line', // or 'guest'
+  isLoggedIn: false,
 
   async init(){
     try{
       if (!LIFF_ID || LIFF_ID === 'YOUR_LIFF_ID_HERE') throw new Error('ยังไม่ได้ตั้ง LIFF_ID');
       await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()){
-        // ใช้ redirectUri ปัจจุบัน เพื่อใช้ได้ทั้งใน/นอก LINE
-        liff.login({ redirectUri: location.href });
-        throw new Error('redirecting');
+      if (!liff.isLoggedIn()) {
+        // แสดง welcome view จนกว่าจะกด login
+        this.isLoggedIn = false;
+        this.mode = 'guest';
+        this.profile = { id:'GUEST', display_name:'โหมดตัวอย่าง', picture_url:'' };
+        this._render();
+        this._wire();
+        return this.profile;
       }
       const idToken = liff.getIDToken();
-      if (!idToken) throw new Error('ไม่มี idToken จาก LIFF');
-
-      // ส่งแบบ urlencoded → ไม่โดน preflight/CORS
+      if (!idToken) throw new Error('ไม่พบ idToken');
       const res = await apiPost('authLine', { idToken });
-      if (!res.ok) throw new Error(res.error || 'authLine failed');
+      if (!res.ok) throw new Error(res.error||'authLine failed');
 
       this.token = res.data.sessionToken;
       this.profile = res.data.profile;
       this.mode = 'line';
-
-      this._renderBadge();
-      this._wireButtons();
+      this.isLoggedIn = true;
+      this._render();
+      this._wire();
       return this.profile;
     }catch(err){
       console.warn('[Auth.init]', err.message);
-      // Guest mode (ใช้ได้เสมอนอก LINE)
-      this.profile = { id: 'GUEST', display_name: 'Guest Mode', picture_url: '' };
       this.mode = 'guest';
+      this.profile = { id:'GUEST', display_name:'โหมดตัวอย่าง', picture_url:'' };
       this.token = null;
-      this._renderBadge();
-      this._wireButtons();
+      this.isLoggedIn = false;
+      this._render();
+      this._wire();
       return this.profile;
     }
   },
 
   login(){
     try{
-      if (typeof liff === 'undefined') throw new Error('LIFF SDK not loaded');
+      if (!LIFF_ID || typeof liff==='undefined') throw new Error('LIFF ไม่พร้อม');
       if (!liff.isLoggedIn()) liff.login({ redirectUri: location.href });
-    }catch(err){
-      alert('ไม่สามารถเข้าสู่ระบบ LINE ได้: ' + err.message);
-    }
+    }catch(err){ alert('เข้าสู่ระบบ LINE ไม่ได้: '+err.message); }
   },
 
   logout(){
-    try { if (typeof liff !== 'undefined' && liff.isLoggedIn()) liff.logout(); } catch(_) {}
+    try{ if (liff.isLoggedIn()) liff.logout(); }catch(_){};
     location.reload();
   },
 
-  _renderBadge(){
+  _render(){
+    // header badge
     userBadge?.classList.remove('hidden');
-    if (this.profile?.picture_url && avatar) avatar.src = this.profile.picture_url;
-    if (nameEl) nameEl.textContent = this.profile?.display_name || (this.mode==='guest' ? 'Guest Mode' : 'ผู้ใช้');
+    if (this.profile?.picture_url) { avatar.src = this.profile.picture_url; heroAvatar.src = this.profile.picture_url; }
+    userName.textContent = this.profile?.display_name || 'ผู้ใช้';
+    userRole.textContent = this.mode==='line' ? 'LINE User' : 'Guest Preview';
+    heroName.textContent = userName.textContent;
+    heroRole.textContent = userRole.textContent;
+
+    // toggle welcome/home
+    const vw = document.getElementById('view-welcome');
+    const vh = document.getElementById('view-home');
+    if (this.isLoggedIn) { vw.classList.add('hidden'); vh.classList.remove('hidden'); }
+    else { vw.classList.remove('hidden'); vh.classList.remove('hidden'); } // ทั้งสองพร้อม แต่ปุ่ม "เริ่มทำ" จะชวน login
   },
 
-  _wireButtons(){
-    if (btnLogout) btnLogout.onclick = ()=>this.logout();
-    if (btnLogin) btnLogin.onclick = ()=>this.login();
-    if (btnGuest) btnGuest.onclick = ()=>{
-      alert('โหมดทดสอบ: จะไม่บันทึกผู้ใช้จริง แต่สามารถลองทำข้อสอบได้');
-      location.hash = '#/';
-    };
+  _wire(){
+    btnLogout && (btnLogout.onclick = ()=>this.logout());
+    btnLogin && (btnLogin.onclick = ()=>this.login());
+    btnGuest && (btnGuest.onclick = ()=>{
+      this.mode = 'guest'; this.isLoggedIn = false;
+      document.getElementById('view-welcome').classList.add('hidden');
+      document.getElementById('view-home').classList.remove('hidden');
+    });
   }
 };
+
+window.Auth = Auth; // expose for other modules

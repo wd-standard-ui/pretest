@@ -1,142 +1,110 @@
-// app.js — App shell + routing + categorized exams + profile header
+// app.js — Home & cards (appwd-like), guest preview behavior
 import { Auth } from './auth.js';
-import * as API from './api.js';
-import * as UI from './ui.js';
+import { apiGet, SCRIPT_URL } from './api.js';
+import { toast, el } from './ui.js';
 import * as Exam from './exam.js';
 
-const views = {
-  login: document.getElementById('view-login'),
-  home: document.getElementById('view-home'),
-  exam: document.getElementById('view-exam'),
-  teacherShortcut: document.getElementById('view-teacher-shortcut')
-};
-
-function show(id){
-  Object.values(views).forEach(v=>v.classList.add('hidden'));
-  (views[id]||views.login).classList.remove('hidden');
-}
-
-function activeTab(tabId){
-  document.querySelectorAll('.appbar .btn-tab').forEach(b=>b.classList.remove('font-bold','text-blue-600'));
-  const el = document.getElementById(tabId);
-  if (el) el.classList.add('font-bold','text-blue-600');
+function activeTab(id){
+  document.querySelectorAll('.tabbar .tab-btn').forEach(t=>t.classList.remove('font-bold','text-brand'));
+  const el = document.getElementById(id); if (el) el.classList.add('font-bold','text-brand');
 }
 
 async function renderHome(){
-  // Profile header
-  const me = Auth.profile || {};
-  const heroAvatar = document.getElementById('heroAvatar');
-  const heroName = document.getElementById('heroName');
-  const heroRole = document.getElementById('heroRole');
-  if (me.picture_url) heroAvatar.src = me.picture_url;
-  heroName.textContent = me.display_name || 'ผู้ใช้';
-  heroRole.textContent = Auth.mode === 'guest' ? 'Guest Mode (นอก LINE)' : 'LINE User';
-
-  // Subjects
-  const subjRes = await API.apiGet('listClasses'); // we don't have subjects endpoint via GET; fallback render tabs from subjects stored by admin? 
-  // Instead call JSONP to list subjects via GAS admin wrapper if available
-  let subjects = [];
-  try {
-    const sres = await fetch(new URL(API.SCRIPT_URL || '', location).toString()); // noop
-  } catch(_) {}
-
-  // Render exams grouped by subject using listOpenExams
-  const res = await API.apiGet('listOpenExams');
+  const res = await apiGet('listOpenExams');
   const grid = document.getElementById('examGrid');
-  grid.innerHTML='';
-  if (!res.ok) { UI.toast(res.error,'error'); return; }
-  let list = res.data || [];
-  // Guest preview: if guest, show demo subset and overlay login CTA like appwd
-  const isGuest = (Auth.mode === 'guest');
-  if (isGuest) {
-    list = list.slice(0, Math.min(4, list.length)); // preview only a few
-  }
-  const bySubject = {};
-  list.forEach(ex => { (bySubject[ex.subject_id] = bySubject[ex.subject_id] || []).push(ex); });
-
   const tabs = document.getElementById('subjectTabs');
-  tabs.innerHTML='';
-  const keys = Object.keys(bySubject);
-  const allBtn = document.createElement('button'); allBtn.className='tab active'; allBtn.textContent='ทั้งหมด'; allBtn.dataset.key='*';
-  tabs.appendChild(allBtn);
-  keys.forEach(k=>{ const b=document.createElement('button'); b.className='tab'; b.dataset.key=k; b.textContent=k.toUpperCase(); tabs.appendChild(b); });
+  grid.innerHTML = ''; tabs.innerHTML = '';
+  if (!res.ok){ toast(res.error,'error'); return; }
+  let list = res.data || [];
+  const isGuest = (Auth.mode === 'guest' || !Auth.isLoggedIn);
+  if (isGuest) list = list.slice(0, Math.min(6, list.length)); // show more but still preview
 
-  function renderCards(filter='*'){
-    grid.innerHTML='';
+  const bySubj = {};
+  list.forEach(ex => { (bySubj[ex.subject_id]=bySubj[ex.subject_id]||[]).push(ex); });
+
+  // Tabs
+  const all = el('button','px-3 py-2 rounded-full bg-gray-100 text-sm'); all.textContent='ทั้งหมด'; all.dataset.key='*'; tabs.appendChild(all);
+  Object.keys(bySubj).forEach(k=>{
+    const b = el('button','px-3 py-2 rounded-full bg-gray-100 text-sm'); b.dataset.key=k; b.textContent=k.toUpperCase();
+    tabs.appendChild(b);
+  });
+  tabs.firstChild.classList.add('bg-brand','text-white');
+
+  function renderCards(key='*'){
+    grid.innerHTML = '';
     const frag = document.createDocumentFragment();
-    list.filter(ex => filter==='*' || ex.subject_id===filter).forEach(ex => {
-      const card = document.createElement('div'); card.className = 'card space-y-2';
-      card.innerHTML = `
+    list.filter(x=> key==='*' || x.subject_id===key).forEach(ex=>{
+      const c = el('div','card space-y-2');
+      c.innerHTML = `
         <div class="flex items-center justify-between">
           <div>
             <div class="font-semibold">${ex.title}</div>
-            <div class="text-xs text-gray-500">คะแนนผ่าน ${ex.passing_score} | เวลา ${ex.time_limit} นาที</div>
+            <div class="text-xs text-gray-500">ผ่าน ${ex.passing_score} | ${ex.time_limit} นาที</div>
           </div>
-          <span class="badge ${ex.subject_id==='math'?'bg-blue-100 text-blue-700':ex.subject_id==='eng'?'bg-red-100 text-red-700':'bg-green-100 text-green-700'}">${ex.subject_id}</span>
+          <span class="badge ${ex.subject_id==='math'?'bg-blue-100 text-blue-700':ex.subject_id==='eng'?'bg-red-100 text-red-700':'bg-emerald-100 text-emerald-700'}">${ex.subject_id}</span>
         </div>
         <button class="btn w-full">${isGuest?'ดูตัวอย่าง':'เริ่มทำข้อสอบ'}</button>`;
-      const btn = card.querySelector('button');
-      if (isGuest) {
-        btn.onclick = () => Swal.fire({
-          title: 'ล็อกอินด้วย LINE',
-          text: 'เพื่อเริ่มทำข้อสอบจริง โปรดเข้าสู่ระบบด้วย LINE (เหมือนแอป appwd)',
+      const btn = c.querySelector('button');
+      if (isGuest){
+        btn.onclick = ()=> Swal.fire({
+          title: 'เข้าสู่ระบบด้วย LINE',
+          text: 'เพื่อเริ่มทำข้อสอบจริง โปรดเข้าสู่ระบบ',
           icon: 'info', confirmButtonText: 'Login with LINE', showCancelButton: true, cancelButtonText: 'ภายหลัง'
-        }).then(r=>{ if (r.isConfirmed) { import('./auth.js').then(m=>m.Auth.login()); } });
-      } else {
+        }).then(r=>{ if (r.isConfirmed) Auth.login(); });
+      }else{
         btn.onclick = ()=>{ location.hash = '#/exam/'+ex.id; };
       }
-      frag.appendChild(card);
+      frag.appendChild(c);
     });
     grid.appendChild(frag);
   }
   renderCards('*');
-  tabs.querySelectorAll('.tab').forEach(b=>{ b.onclick=()=>{ tabs.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderCards(b.dataset.key); }; });
-(b=>{
-    b.onclick = ()=>{
-      tabs.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');
-      renderCards(b.dataset.key);
-    };
+  tabs.querySelectorAll('button').forEach(b=> b.onclick = ()=>{
+    tabs.querySelectorAll('button').forEach(x=>x.classList.remove('bg-brand','text-white'));
+    b.classList.add('bg-brand','text-white');
+    renderCards(b.dataset.key);
   });
 
-  // Teacher shortcut
-  const role = (Auth.profile && Auth.profile.role) || 'student';
-  const shortcut = document.getElementById('view-teacher-shortcut');
-  const linkAdmin = document.getElementById('linkAdmin');
-  if (role==='teacher' || role==='admin'){
-    shortcut.classList.remove('hidden');
-    // Assume SCRIPT_URL in config.js
-    import('./config.js').then(cfg=>{
-      linkAdmin.href = cfg.SCRIPT_URL + '?action=ui';
-    }).catch(()=>{});
-  }else{
-    shortcut.classList.add('hidden');
+  // Teacher shortcut link
+  const t = document.getElementById('teacherShortcut');
+  const link = document.getElementById('linkAdmin');
+  if ((Auth.profile && (Auth.profile.role==='teacher' || Auth.profile.role==='admin')) || false){
+    t.classList.remove('hidden');
+    link.href = SCRIPT_URL + '?action=ui';
+  } else {
+    t.classList.add('hidden');
   }
 }
 
 async function boot(){
-  // header handlers are in auth.js
-  try{
-    await Auth.init();
-    // mount exam hash router
-    window.addEventListener('hashchange', ()=>{
-      const m = location.hash.match(/#\/exam\/(.+)$/);
-      if (m){ show('exam'); Exam.openExam(m[1]); activeTab('tabExams'); }
-      else { show('home'); activeTab('tabHome'); }
-    });
-    // initial route
+  await Auth.init();
+  // initial route
+  if (location.hash.startsWith('#/exam/')){
+    document.getElementById('view-home').classList.add('hidden');
+    document.getElementById('view-exam').classList.remove('hidden');
+    const id = location.hash.split('/').pop();
+    await Exam.openExam(id);
+    activeTab('tabExams');
+  } else {
+    document.getElementById('view-home').classList.remove('hidden');
+    document.getElementById('view-exam').classList.add('hidden');
+    await renderHome();
+    activeTab('tabHome');
+  }
+
+  window.addEventListener('hashchange', async ()=>{
     if (location.hash.startsWith('#/exam/')){
-      show('exam'); const id = location.hash.split('/').pop(); Exam.openExam(id);
+      document.getElementById('view-home').classList.add('hidden');
+      document.getElementById('view-exam').classList.remove('hidden');
+      await Exam.openExam(location.hash.split('/').pop());
       activeTab('tabExams');
     } else {
-      show('home'); await renderHome(); activeTab('tabHome');
+      document.getElementById('view-exam').classList.add('hidden');
+      document.getElementById('view-home').classList.remove('hidden');
+      await renderHome();
+      activeTab('tabHome');
     }
-  }catch(err){
-    console.warn(err);
-    show('login');
-    UI.toast('กรุณาเข้าสู่ระบบด้วย LINE หรือใช้โหมดทดสอบ','info');
-    document.getElementById('btnLineLogin').onclick = ()=>Auth.login();
-  }
+  });
 }
 
 window.addEventListener('DOMContentLoaded', boot);

@@ -1,23 +1,8 @@
-// ui.js — toast/skeleton/DOM helpers (ไทย)
-export function toast(text, icon='success'){
-  // ใช้ SweetAlert2
-  return Swal.fire({
-    toast: true,
-    position: 'top-end',
-    showConfirmButton: false,
-    timer: 2000,
-    icon,
-    title: text
-  });
+// ui.js — small helpers
+export function el(tag, cls){
+  const d = document.createElement(tag); if (cls) d.className = cls; return d;
 }
-
-export function el(tag, className='', html=''){
-  const e = document.createElement(tag);
-  if (className) e.className = className;
-  if (html) e.innerHTML = html;
-  return e;
-}
-
-export function mountHeaderHandlers(){
-  // ที่หัวหน้าเว็บ (logout ทำใน auth.js แล้ว)
+export function toast(msg, type='info'){
+  if (window.Swal) return Swal.fire({ title: msg, icon: type, timer: 1600, showConfirmButton:false });
+  alert(msg);
 }
