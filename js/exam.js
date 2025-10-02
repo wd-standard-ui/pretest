@@ -86,7 +86,6 @@ async function submitExam(){
     answers: collectAnswers(),
     time_spent: 0
   };
-  if (window.Auth && window.Auth.profile && window.Auth.profile.id) payload.student_id = window.Auth.profile.id;
   const res = await apiPost('submitAttempt', payload);
   if (!res.ok) return toast(res.error,'error');
   toast('ส่งคำตอบแล้ว | คะแนน: '+res.data.score,'success');
