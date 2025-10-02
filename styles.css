@@ -1,0 +1,16 @@
+/* styles.css */
+:root{
+  --brand:#2563EB;
+  --brand-soft:#EAF2FF;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:#f8fafc}
+.card{background:#fff;border-radius:1rem;box-shadow:0 10px 24px rgba(37,99,235,.08);padding:1rem}
+.choice{display:flex; gap:.5rem; padding:.5rem .75rem; border:1px solid #e5e7eb; border-radius:.75rem; cursor:pointer}
+.choice input{margin-top:.2rem}
+.choice.correct{background:#ecfdf5;border-color:#10b981}
+.choice.wrong{background:#fef2f2;border-color:#ef4444}
+@media (min-width: 768px){
+  .question{break-inside:avoid}
+}

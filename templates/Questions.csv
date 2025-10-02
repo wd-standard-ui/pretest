@@ -1,0 +1,5 @@
+id,subject_id,grade_id,type,prompt,choice_a,choice_b,choice_c,choice_d,correct,points,media,explanation
+Q0001,TH,P4,single,คำว่าใดสะกดถูกต้อง?,กำแพง,กำเเพง,กำแพงค์,กำเพง,A,1,,
+Q0002,MATH,P4,single,2 + 3 = ?,4,5,6,7,B,1,,
+Q0003,ENG,P4,fill,Fill in the missing word: "I ___ a book.",read,,,,"read",1,,
+Q0004,MATH,P4,multiple,ข้อใดเป็นจำนวนเฉพาะ?,2,3,4,5,A|B|D,2,,

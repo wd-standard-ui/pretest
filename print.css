@@ -1,0 +1,9 @@
+/* print.css */
+@page { size: A4; margin: 16mm; }
+body { font-family: 'Kanit', system-ui, sans-serif; color:#111 }
+#view-exam{ display:block !important }
+#mobileExam{ display:none !important }
+#desktopExam{ display:block !important }
+header, #view-subjects, #view-setup, #view-instructions, #view-result, #view-loading, #btnSubmit, #btnPagePrev, #btnPageNext, #btnPrint, #btnPrintNow { display:none !important }
+.question{ page-break-inside: avoid; margin-bottom: 12px }
+.choice{ border:none; padding:0; margin:2px 0 }
