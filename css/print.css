@@ -1,0 +1,7 @@
+/* print.css — โหมดพิมพ์ A4 */
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body { background: white; color: black; }
+  .page-break { page-break-after: always; }
+}

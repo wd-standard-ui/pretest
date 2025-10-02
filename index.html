@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Exam System — Starter</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Kanit','system-ui','sans-serif'] },
+          colors: {
+            subjectMath: '#3B82F6',
+            subjectEng: '#EF4444',
+            subjectThai: '#10B981'
+          },
+          boxShadow: { card: '0 10px 24px rgba(0,0,0,.08)' }
+        }
+      }
+    }
+  </script>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/print.css">
+  <!-- SweetAlert2 & Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.10.7/sweetalert2.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <!-- LIFF SDK -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    .btn { @apply px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50; }
+    .card { @apply bg-white rounded-2xl shadow-card p-4; }
+    .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800">
+  <header class="sticky top-0 bg-white/80 backdrop-blur border-b z-30">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="font-bold">📘 Exam System</div>
+      <div id="userBadge" class="hidden items-center gap-2">
+        <img id="userAvatar" class="w-8 h-8 rounded-full" alt="avatar"/>
+        <span id="userName" class="text-sm"></span>
+        <button id="btnLogout" class="text-xs text-red-600 underline">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    <!-- Login Section -->
+    <section id="view-login" class="card">
+      <h1 class="text-xl font-bold mb-2">เข้าสู่ระบบ</h1>
+      <p class="text-gray-600 mb-4">ระบบนี้ใช้ LINE Login (LIFF) เท่านั้น</p>
+      <button id="btnLineLogin" class="btn">Login with LINE</button>
+    </section>
+
+    <!-- Teacher Dashboard -->
+    <section id="view-teacher" class="hidden space-y-4">
+      <div class="card flex items-center justify-between">
+        <div class="space-y-1">
+          <h2 class="text-lg font-semibold">แดชบอร์ดครู</h2>
+          <p class="text-sm text-gray-500">เลือกชั้นเรียน → จัดการข้อสอบ/คำถาม (อัปโหลดรูปได้)</p>
+        </div>
+        <div class="flex gap-2 items-center">
+          <select id="selectClass" class="border rounded-lg px-3 py-2"></select>
+          <button id="btnNewExam" class="btn">สร้างข้อสอบ</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="font-semibold mb-3">รายการข้อสอบในชั้นนี้</h3>
+        <div id="examList" class="grid sm:grid-cols-2 gap-3"></div>
+      </div>
+
+      <div class="card">
+        <h3 class="font-semibold mb-3">เพิ่ม/แก้ไขคำถาม (ตัวอย่าง Minimal)</h3>
+        <form id="formQuestion" class="grid md:grid-cols-2 gap-3">
+          <input type="text" id="qExamId" placeholder="Exam ID" class="border rounded-lg px-3 py-2" required>
+          <input type="number" id="qOrder" placeholder="ลำดับ" class="border rounded-lg px-3 py-2" value="1" min="1">
+          <select id="qType" class="border rounded-lg px-3 py-2">
+            <option value="mcq">Multiple Choice</option>
+            <option value="matching">Matching</option>
+            <option value="fill">Fill in the Blank</option>
+            <option value="tf">True/False</option>
+          </select>
+          <input type="number" id="qPoints" placeholder="คะแนน" class="border rounded-lg px-3 py-2" value="1" min="0">
+          <textarea id="qText" placeholder="ข้อความคำถาม" class="border rounded-lg px-3 py-2 md:col-span-2" required></textarea>
+
+          <label class="md:col-span-2">
+            <span class="block text-sm text-gray-600 mb-1">แนบรูปภาพ (ได้หลายไฟล์)</span>
+            <input type="file" id="qFiles" multiple accept="image/*" class="block w-full">
+          </label>
+
+          <button class="btn md:col-span-2">บันทึกคำถาม</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Student Dashboard -->
+    <section id="view-student" class="hidden space-y-4">
+      <div class="card">
+        <h2 class="text-lg font-semibold mb-2">ข้อสอบที่เปิดให้ทำ</h2>
+        <div id="openExams" class="grid sm:grid-cols-2 gap-3"></div>
+      </div>
+      <div class="card">
+        <h3 class="font-semibold mb-2">ประวัติการทำข้อสอบ</h3>
+        <div id="attemptHistory" class="text-sm text-gray-500">—</div>
+      </div>
+    </section>
+
+    <!-- Exam Taking View -->
+    <section id="view-exam" class="hidden space-y-4">
+      <div class="card flex items-center justify-between">
+        <div>
+          <h2 id="examTitle" class="text-lg font-semibold"></h2>
+          <p id="examMeta" class="text-sm text-gray-500"></p>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-gray-500">เวลา</div>
+          <div id="examTimer" class="text-xl font-bold">—:—</div>
+        </div>
+      </div>
+      <div id="examQuestions" class="space-y-3"></div>
+      <div class="card flex justify-end">
+        <button id="btnSubmitExam" class="btn">ส่งคำตอบ</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Print-only -->
+  <section id="view-print" class="hidden print:block print:p-6">
+    <h1 class="text-xl font-bold mb-2">ใบงาน</h1>
+    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+      <div>ชื่อ-นามสกุล: _______________________</div>
+      <div>เลขที่: _______</div>
+      <div>วันที่: ____/____/______</div>
+    </div>
+    <div id="printContent" class="space-y-4"></div>
+    <div class="page-break"></div>
+    <h2 class="text-lg font-semibold">เฉลย</h2>
+    <div id="printAnswer" class="space-y-2"></div>
+  </section>
+
+  <!-- Config + App -->
+  <script type="module" src="./js/config.js"></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
