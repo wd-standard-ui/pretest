@@ -1,7 +1,7 @@
 /* api.js (non-module, global) */
 (function(){
   // === Configuration ===
-  var SCRIPT_URL = window.WD_EXAM_SCRIPT_URL || 'YOUR_WEB_APP_URL_HERE'; // set window.WD_EXAM_SCRIPT_URL at runtime if you want
+  var SCRIPT_URL = window.WD_EXAM_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbxn1grHkvNUMaS_fod-RpR7tR4b9rm65YwzHZehoMKfVqZJCQYh-ElxzvrpfkFLfwCQ/exec'; // set window.WD_EXAM_SCRIPT_URL at runtime if you want
   var API_KEY = window.WD_EXAM_API_KEY || ''; // optional
 
   function httpPostJSON(path, payload){
