@@ -1,4 +1,3 @@
-// frontend/js/exam.js — fixed (no await in non-async)
 import { apiGet, apiPost } from './api.js';
 import { toast, el } from './ui.js';
 import { SCRIPT_URL } from './config.js';
@@ -11,7 +10,13 @@ const examQuestions = document.getElementById('examQuestions');
 const btnSubmit = document.getElementById('btnSubmitExam');
 const btnPrint = document.getElementById('btnPrintExam');
 
-let CURRENT = { id: null, secs: 0, tick: null, answers: {} };
+// Mobile controls
+const mobileControls = document.getElementById('mobileControls');
+const btnPrevQ = document.getElementById('btnPrevQ');
+const btnNextQ = document.getElementById('btnNextQ');
+const qProgress = document.getElementById('qProgress');
+
+let CURRENT = { id: null, secs: 0, tick: null, answers: {}, questions: [], idx: 0 };
 
 export async function openExam(examId){
   const res = await apiGet('getExam', { id: examId });
@@ -21,6 +26,8 @@ export async function openExam(examId){
   CURRENT.id = exam.id;
   CURRENT.secs = (Number(exam.time_limit)||10) * 60;
   CURRENT.answers = {};
+  CURRENT.questions = questions || [];
+  CURRENT.idx = 0;
 
   examTitle.textContent = exam.title;
   examMeta.textContent = `เวลาทำ ${exam.time_limit} นาที | คะแนนผ่าน ${exam.passing_score}`;
@@ -29,25 +36,61 @@ export async function openExam(examId){
   startTimer();
 
   btnSubmit.onclick = submitExam;
-
-  // ⛔️ ไม่มี await ที่นี่แล้ว
   btnPrint.onclick = () => {
     const url = `${SCRIPT_URL}?action=printExam&id=${encodeURIComponent(exam.id)}`;
     window.open(url, '_blank');
   };
+
+  setupMobilePager();
+  updateMobilePager();
+}
+
+function setupMobilePager(){
+  // Show controls only on small screens
+  if (window.matchMedia('(max-width: 639px)').matches){
+    mobileControls.classList.remove('hidden');
+    btnPrevQ.onclick = ()=>{ if (CURRENT.idx>0){ CURRENT.idx--; updateMobilePager(); } };
+    btnNextQ.onclick = ()=>{ if (CURRENT.idx<CURRENT.questions.length-1){ CURRENT.idx++; updateMobilePager(); } else { submitExam(); } };
+  } else {
+    mobileControls.classList.add('hidden');
+  }
+}
+
+function updateMobilePager(){
+  const total = CURRENT.questions.length || 0;
+  qProgress.textContent = `ข้อ ${Math.min(CURRENT.idx+1,total)}/${total||'—'}`;
+  // Hide all items except current
+  const items = examQuestions.querySelectorAll('[data-qwrap]');
+  items.forEach((it, i)=>{
+    if (window.matchMedia('(max-width: 639px)').matches){
+      it.classList.toggle('hidden', i !== CURRENT.idx);
+    }else{
+      it.classList.remove('hidden');
+    }
+  });
+  // Auto-scroll to question on mobile
+  if (window.matchMedia('(max-width: 639px)').matches){
+    const cur = items[CURRENT.idx];
+    if (cur) cur.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
 }
 
 function renderQuestions(questions){
   examQuestions.innerHTML = '';
+  const frag = document.createDocumentFragment();
   questions.forEach((q, idx)=>{
     const box = el('div','card space-y-2');
-    const imgs = (q.assets||[]).map(a=>`<img src="${a.thumb||a.webViewLink}" alt="${a.name}" class="rounded-lg max-h-48 object-contain">`).join('');
+    box.setAttribute('data-qwrap','');
+    const imgs = (q.assets||[]).map(a=>`<img loading="lazy" src="${a.thumb||a.webViewLink}" alt="${a.name}" class="rounded-lg max-h-48 object-contain">`).join('');
     box.innerHTML = `
       <div class="font-semibold">ข้อ ${idx+1}. ${q.question_text}</div>
       ${imgs?`<div class="grid grid-cols-2 gap-2">${imgs}</div>`:''}
       <div data-q="${q.id}">${renderInput(q)}</div>`;
-    examQuestions.appendChild(box);
+    frag.appendChild(box);
   });
+  examQuestions.appendChild(frag);
+  // After render, ensure pager state applies
+  updateMobilePager();
 }
 
 function renderInput(q){
@@ -91,14 +134,8 @@ function renderTimer(){
 }
 
 async function submitExam(){
-  const payload = {
-    exam_id: CURRENT.id,
-    answers: collectAnswers(),
-    time_spent: 0
-  };
-  // แนบ student_id ถ้ามี (รองรับ guest)
+  const payload = { exam_id: CURRENT.id, answers: collectAnswers(), time_spent: 0 };
   if (window.Auth && window.Auth.profile && window.Auth.profile.id) payload.student_id = window.Auth.profile.id;
-
   const res = await apiPost('submitAttempt', payload);
   if (!res.ok) return toast(res.error,'error');
   toast('ส่งคำตอบแล้ว | คะแนน: '+res.data.score,'success');
@@ -121,6 +158,9 @@ function collectAnswers(){
   });
   return arr;
 }
+
+// Re-apply pager on resize
+window.addEventListener('resize', ()=>updateMobilePager());
 
 // Router hook (hash style)
 window.addEventListener('hashchange', ()=>{

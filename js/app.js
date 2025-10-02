@@ -44,32 +44,28 @@ async function renderHome(){
   const res = await API.apiGet('listOpenExams');
   const grid = document.getElementById('examGrid');
   grid.innerHTML='';
-  if (!res.ok) {
-    UI.toast(res.error,'error');
-    return;
+  if (!res.ok) { UI.toast(res.error,'error'); return; }
+  let list = res.data || [];
+  // Guest preview: if guest, show demo subset and overlay login CTA like appwd
+  const isGuest = (Auth.mode === 'guest');
+  if (isGuest) {
+    list = list.slice(0, Math.min(4, list.length)); // preview only a few
   }
-  const list = res.data || [];
   const bySubject = {};
-  list.forEach(ex => {
-    (bySubject[ex.subject_id] = bySubject[ex.subject_id] || []).push(ex);
-  });
+  list.forEach(ex => { (bySubject[ex.subject_id] = bySubject[ex.subject_id] || []).push(ex); });
 
   const tabs = document.getElementById('subjectTabs');
   tabs.innerHTML='';
   const keys = Object.keys(bySubject);
   const allBtn = document.createElement('button'); allBtn.className='tab active'; allBtn.textContent='ทั้งหมด'; allBtn.dataset.key='*';
   tabs.appendChild(allBtn);
-  keys.forEach(k=>{
-    const b = document.createElement('button');
-    b.className='tab'; b.dataset.key = k; b.textContent = k.toUpperCase();
-    tabs.appendChild(b);
-  });
+  keys.forEach(k=>{ const b=document.createElement('button'); b.className='tab'; b.dataset.key=k; b.textContent=k.toUpperCase(); tabs.appendChild(b); });
 
   function renderCards(filter='*'){
     grid.innerHTML='';
+    const frag = document.createDocumentFragment();
     list.filter(ex => filter==='*' || ex.subject_id===filter).forEach(ex => {
-      const card = document.createElement('div');
-      card.className = 'card space-y-2';
+      const card = document.createElement('div'); card.className = 'card space-y-2';
       card.innerHTML = `
         <div class="flex items-center justify-between">
           <div>
@@ -78,15 +74,24 @@ async function renderHome(){
           </div>
           <span class="badge ${ex.subject_id==='math'?'bg-blue-100 text-blue-700':ex.subject_id==='eng'?'bg-red-100 text-red-700':'bg-green-100 text-green-700'}">${ex.subject_id}</span>
         </div>
-        <button class="btn w-full">เริ่มทำข้อสอบ</button>`;
-      card.querySelector('button').onclick = ()=>{
-        location.hash = '#/exam/'+ex.id;
-      };
-      grid.appendChild(card);
+        <button class="btn w-full">${isGuest?'ดูตัวอย่าง':'เริ่มทำข้อสอบ'}</button>`;
+      const btn = card.querySelector('button');
+      if (isGuest) {
+        btn.onclick = () => Swal.fire({
+          title: 'ล็อกอินด้วย LINE',
+          text: 'เพื่อเริ่มทำข้อสอบจริง โปรดเข้าสู่ระบบด้วย LINE (เหมือนแอป appwd)',
+          icon: 'info', confirmButtonText: 'Login with LINE', showCancelButton: true, cancelButtonText: 'ภายหลัง'
+        }).then(r=>{ if (r.isConfirmed) { import('./auth.js').then(m=>m.Auth.login()); } });
+      } else {
+        btn.onclick = ()=>{ location.hash = '#/exam/'+ex.id; };
+      }
+      frag.appendChild(card);
     });
+    grid.appendChild(frag);
   }
   renderCards('*');
-  tabs.querySelectorAll('.tab').forEach(b=>{
+  tabs.querySelectorAll('.tab').forEach(b=>{ b.onclick=()=>{ tabs.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderCards(b.dataset.key); }; });
+(b=>{
     b.onclick = ()=>{
       tabs.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
