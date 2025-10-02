@@ -8,6 +8,7 @@ const examMeta = document.getElementById('examMeta');
 const examTimer = document.getElementById('examTimer');
 const examQuestions = document.getElementById('examQuestions');
 const btnSubmit = document.getElementById('btnSubmitExam');
+const btnPrint = document.getElementById('btnPrintExam');
 
 let CURRENT = { id: null, secs: 0, tick: null, answers: {} };
 
@@ -27,6 +28,7 @@ export async function openExam(examId){
   startTimer();
 
   btnSubmit.onclick = submitExam;
+  btnPrint.onclick = ()=>{ window.open(new URL((await import('./config.js')).SCRIPT_URL + '?action=printExam&id='+encodeURIComponent(exam.id)).toString(), '_blank'); };
 }
 
 function renderQuestions(questions){
@@ -86,6 +88,7 @@ async function submitExam(){
     answers: collectAnswers(),
     time_spent: 0
   };
+  if (window.Auth && window.Auth.profile && window.Auth.profile.id) payload.student_id = window.Auth.profile.id;
   const res = await apiPost('submitAttempt', payload);
   if (!res.ok) return toast(res.error,'error');
   toast('ส่งคำตอบแล้ว | คะแนน: '+res.data.score,'success');
