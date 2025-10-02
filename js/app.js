@@ -23,6 +23,7 @@ async function boot(){
   UI.mountHeaderHandlers();
   try{
     await Auth.init();
+    window.Auth = Auth;
     UI.toast('เข้าสู่ระบบสำเร็จ','success');
     const me = Auth.profile;
     if (me.role === 'teacher' || me.role === 'admin'){
