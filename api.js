@@ -1,6 +1,6 @@
 /* api.js */
 // === Configuration ===
-export const SCRIPT_URL = 'YOUR_WEB_APP_URL_HERE'; // << ใส่ Web App URL ของ Apps Script
+export const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxn1grHkvNUMaS_fod-RpR7tR4b9rm65YwzHZehoMKfVqZJCQYh-ElxzvrpfkFLfwCQ/exec'; // << ใส่ Web App URL ของ Apps Script
 export const API_KEY = ''; // (optional) ใช้คู่กับ Apps Script ถ้าต้องการตรวจสอบอย่างง่าย
 
 // === HTTP helpers ===
