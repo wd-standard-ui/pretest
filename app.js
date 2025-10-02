@@ -1,5 +1,5 @@
 /* app.js */
-import { API } from './api.js';
+const API = window.API;
 
 const dom = sel => document.querySelector(sel);
 const show = id => document.getElementById(id).classList.remove('hidden');
